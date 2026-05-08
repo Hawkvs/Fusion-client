@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { List, Title, Divider, Container, Loader, Grid } from "@mantine/core";
+import { List, Title, Divider, Container, Loader } from "@mantine/core";
 import axios from "axios";
+import styles from "./Catalog.module.css";
 import { showAwardRoute } from "../../../../routes/SPACSRoutes";
 
 function AwardsAndScholarshipCatalog() {
@@ -16,7 +17,7 @@ function AwardsAndScholarshipCatalog() {
     const fetchAwardsData = async () => {
       try {
         const token = localStorage.getItem("authToken");
-        const response = await axios.get(showAwardRoute, {
+        const response = await axios.get(`${showAwardRoute}?_t=${new Date().getTime()}`, {
           headers: {
             Authorization: `Token ${token}`,
             "Content-Type": "application/json",
@@ -38,66 +39,44 @@ function AwardsAndScholarshipCatalog() {
   }, []);
 
   return (
-    <Container
-      size="lg"
-      px={{ base: "xs", sm: "md", md: "lg" }}
-      py={{ base: "sm", sm: "md", md: "xl" }}
-    >
+    <Container className={styles.wrapper}>
       {isLoading ? (
         <Loader size="lg" />
       ) : (
-        <Grid gap={{ base: "sm", md: "lg" }}>
-          {/* List of Awards */}
-          <Grid.Col
-            span={{ sm: 12, md: 4 }}
-            bg={{ base: "gray.0", md: "gray.1" }}
-            p={{ base: "xs", md: "sm" }}
-            style={{ borderRadius: "8px" }}
-          >
+        <>
+          <div className={styles.listContainer}>
             <List spacing="sm" size="lg">
               {awards.map((award) => (
                 <List.Item
                   key={award.id}
                   onClick={() => handleAwardSelect(award)}
-                  style={{
-                    cursor: "pointer",
-                    fontWeight:
-                      selectedAward?.id === award.id ? "bold" : "normal",
-                  }}
+                  className={`${styles.listItem} ${
+                    selectedAward?.id === award.id ? styles.activeItem : ""
+                  }`}
                 >
-                  {award.award_name}
+                  {award.award_name || award.name}
                 </List.Item>
               ))}
             </List>
-          </Grid.Col>
+          </div>
 
-          {/* Award Details */}
-          <Grid.Col
-            span={{ sm: 12, md: 8 }}
-            bg="gray.0"
-            p={{ base: "xs", md: "sm" }}
-            style={{ borderRadius: "8px" }}
-          >
+          <div className={styles.contentContainer}>
             {selectedAward && (
               <>
-                <Title
-                  order={2}
-                  size={{ base: "16px", sm: "20px", md: "26px" }}
-                >
-                  {selectedAward.award_name}
+                <Title order={2}>
+                  {selectedAward.award_name || selectedAward.name}
                 </Title>
                 <Divider my="sm" />
 
-                {/* Display catalog as bullet points */}
                 <List size="md" spacing="sm">
-                  {selectedAward.catalog.split("\n").map((point, index) => (
+                  {(selectedAward.catalog || selectedAward.description || "").split("\n").map((point, index) => (
                     <List.Item key={index}>{point}</List.Item>
                   ))}
                 </List>
               </>
             )}
-          </Grid.Col>
-        </Grid>
+          </div>
+        </>
       )}
     </Container>
   );

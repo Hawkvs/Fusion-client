@@ -1,49 +1,50 @@
 import React, { useState } from "react";
-import { Tabs, Text } from "@mantine/core";
-import AwardsAndScholarshipCatalog from "../components/AwardsAndScholarshipCatalogC";
+import { Flex } from "@mantine/core";
+import ConvenerCatalog from "../../components/tables/ConvenerCatalog";
+import ConvenerApplicationsTable from "../../components/tables/ConvenerApplicationsTable";
+import MeritList from "../../components/tables/MeritList";
 import SpacsMembers from "../components/spacsMembersC";
 import PreviousWinners from "../components/previousWinnerC";
 import styles from "./Convenor.module.css";
+import ModuleTabs from "../../../../components/moduleTabs";
 
 function ConvenorPage() {
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState("0");
 
   const tabItems = [
-    {
-      label: "Awards and Scholarship Catalogue",
-      component: <AwardsAndScholarshipCatalog />,
-    },
-    { label: "SPACS Members and Details", component: <SpacsMembers /> },
-    { label: "Previous Winners", component: <PreviousWinners /> },
+    { title: "Awards Management" },
+    { title: "Review Applications" },
+    { title: "Merit List" },
+    { title: "SPACS Members" },
+    { title: "Previous Winners" }
   ];
 
+  const tabComponents = [
+    <ConvenerCatalog key="awards" />,
+    <ConvenerApplicationsTable key="apps" />,
+    <MeritList key="merit_list" />,
+    <SpacsMembers key="spacs" />,
+    <PreviousWinners key="winners" />
+  ];
+
+  const ActiveComponent = tabComponents[parseInt(activeTab, 10)];
+
   return (
-    <div className={styles.pageBackground}>
-      <div className={styles.wrapper}>
+    <div className={styles.pageBackground || ""} style={{ padding: '20px' }}>
+      <div className={styles.wrapper || ""}>
         {/* Navigation Tabs */}
-        <div className={styles.tabsContainer}>
-          <Tabs value={activeTab.toString()}>
-            <Tabs.List style={{ display: "flex", flexWrap: "nowrap" }}>
-              {tabItems.map((tab, index) => (
-                <Tabs.Tab
-                  key={index}
-                  value={index.toString()}
-                  onClick={() => setActiveTab(index)}
-                  className={
-                    activeTab === index ? styles.activeTab : styles.inactiveTab
-                  }
-                >
-                  <Text size="lg">{tab.label}</Text>
-                  {/* Underline Progress Bar */}
-                  {activeTab === index && <div className={styles.underline} />}
-                </Tabs.Tab>
-              ))}
-            </Tabs.List>
-          </Tabs>
-        </div>
+        <Flex justify="space-between" align="center" mb="lg">
+          <ModuleTabs
+            tabs={tabItems}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+          />
+        </Flex>
 
         {/* Content */}
-        <div>{tabItems[activeTab].component}</div>
+        <div style={{ marginTop: '20px' }}>
+          {ActiveComponent}
+        </div>
       </div>
     </div>
   );
