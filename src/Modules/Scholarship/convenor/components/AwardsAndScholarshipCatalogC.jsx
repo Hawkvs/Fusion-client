@@ -26,7 +26,7 @@ function AwardsAndScholarshipCatalog() {
   const handleAwardSelect = (award) => {
     setSelectedAward(award);
     setEditMode(false);
-    setUpdatedText(award.catalog);
+    setUpdatedText(award.catalog || award.description || "");
   };
 
   const toggleEditMode = () => {
@@ -58,11 +58,11 @@ function AwardsAndScholarshipCatalog() {
       setAwards((prevAwards) =>
         prevAwards.map((award) =>
           award.id === selectedAward.id
-            ? { ...award, catalog: updatedText }
+            ? { ...award, catalog: updatedText, description: updatedText }
             : award,
         ),
       );
-      setSelectedAward((prev) => ({ ...prev, catalog: updatedText }));
+      setSelectedAward((prev) => ({ ...prev, catalog: updatedText, description: updatedText }));
       setEditMode(false);
     } catch (error) {
       console.error(
@@ -80,7 +80,7 @@ function AwardsAndScholarshipCatalog() {
           throw new Error("Authentication token not found");
         }
 
-        const response = await axios.get(showAwardRoute, {
+        const response = await axios.get(`${showAwardRoute}?_t=${new Date().getTime()}`, {
           headers: {
             Authorization: `Token ${token}`,
             "Content-Type": "application/json",
@@ -89,7 +89,7 @@ function AwardsAndScholarshipCatalog() {
 
         setAwards(response.data);
         setSelectedAward(response.data[0]);
-        setUpdatedText(response.data[0]?.catalog || "");
+        setUpdatedText(response.data[0]?.catalog || response.data[0]?.description || "");
         setIsLoading(false);
       } catch (error) {
         console.error(
@@ -119,7 +119,7 @@ function AwardsAndScholarshipCatalog() {
                     selectedAward?.id === award.id ? styles.activeItem : ""
                   }`}
                 >
-                  {award.award_name}
+                  {award.award_name || award.name}
                 </List.Item>
               ))}
             </List>
@@ -129,7 +129,7 @@ function AwardsAndScholarshipCatalog() {
             {selectedAward && (
               <>
                 <div className={styles.header}>
-                  <Title order={2}>{selectedAward.award_name}</Title>
+                  <Title order={2}>{selectedAward.award_name || selectedAward.name}</Title>
                   <Button
                     className={styles.editButton}
                     onClick={editMode ? saveChanges : toggleEditMode}
@@ -150,7 +150,7 @@ function AwardsAndScholarshipCatalog() {
                   />
                 ) : (
                   <List className={styles.catalogList}>
-                    {selectedAward.catalog.split("\n").map((point, index) => (
+                    {(selectedAward.catalog || selectedAward.description || "").split("\n").map((point, index) => (
                       <List.Item key={index}>{point}</List.Item>
                     ))}
                   </List>

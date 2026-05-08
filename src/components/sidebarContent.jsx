@@ -96,7 +96,7 @@ function SidebarContent({ isCollapsed, toggleSidebar }) {
       label: "Scholarship Portal",
       id: "spacs",
       icon: <ScholarshipIcon size={18} />,
-      url: "/",
+      url: "/scholarships",
     },
     {
       label: "Complaint System",

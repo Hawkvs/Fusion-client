@@ -5,6 +5,7 @@ import {
   Button,
   Button as MantineButton,
   Modal,
+  Tabs,
 } from "@mantine/core";
 import { MantineReactTable } from "mantine-react-table";
 import { IconDownload } from "@tabler/icons-react";
@@ -34,13 +35,13 @@ function MCMApplications() {
       const token = localStorage.getItem("authToken");
       if (!token) throw new Error("No auth token");
 
-      const response = await fetch(getMCMApplicationsRoute, {
+      const response = await fetch(`${getMCMApplicationsRoute}?_t=${new Date().getTime()}`, {
         headers: { Authorization: `Token ${token}` },
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
       const data = await response.json();
-      const incomplete = data.filter((app) => app.status === "INCOMPLETE");
+      const incomplete = data.filter((app) => ["SUBMITTED", "UNDER_REVIEW", "FORWARDED_TO_CONVENOR"].includes(app.status));
       console.log(incomplete);
       setApplications(incomplete);
       setError(null);
@@ -83,12 +84,16 @@ function MCMApplications() {
 
     const payload = {
       id,
-      status:
-        action === "approved"
-          ? "ACCEPTED"
-          : action === "rejected"
-            ? "REJECTED"
-            : "UNDER_REVIEW",
+              status:
+          action === "approved"
+            ? "ACCEPTED"
+            : action === "rejected"
+              ? "REJECTED"
+              : action === "needs_info"
+                ? "INCOMPLETE"
+                : action === "forwarded"
+                  ? "FORWARDED_TO_CONVENOR"
+                  : "UNDER_REVIEW",
     };
 
     console.log("🔼 Sending payload:", payload);
@@ -172,41 +177,54 @@ function MCMApplications() {
       {
         header: "Actions",
         id: "actions",
-        Cell: ({ row }) => (
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            <Button
-              color="green"
-              size="xs"
-              onClick={() =>
-                handleAction(row.original.id, "approved", row.original.student)
-              }
-            >
-              Accept
-            </Button>
-            <Button
-              color="red"
-              size="xs"
-              onClick={() =>
-                handleAction(row.original.id, "rejected", row.original.student)
-              }
-            >
-              Reject
-            </Button>
-            <Button
-              color="gray"
-              size="xs"
-              onClick={() =>
-                handleAction(
-                  row.original.id,
-                  "under_review",
-                  row.original.student,
-                )
-              }
-            >
-              Under Review
-            </Button>
-          </div>
-        ),
+                  Cell: ({ row }) => (
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", minWidth: "150px" }}>
+              {(row.original.status === "SUBMITTED" || row.original.status === "UNDER_REVIEW") && (
+                  <>
+                    <Button
+                      color="yellow"
+                      size="xs"
+                      onClick={() =>
+                        handleAction(row.original.id, "needs_info", row.original.student)
+                      }
+                    >
+                      Request Info
+                    </Button>
+                    <Button
+                      color="blue"
+                      size="xs"
+                      onClick={() =>
+                        handleAction(row.original.id, "forwarded", row.original.student)
+                      }
+                    >
+                      Send to Convenor
+                    </Button>
+                  </>
+              )}
+              {row.original.status === "FORWARDED_TO_CONVENOR" && (
+                  <>
+                    <Button
+                      color="green"
+                      size="xs"
+                      onClick={() =>
+                        handleAction(row.original.id, "approved", row.original.student)
+                      }
+                    >
+                      Accept
+                    </Button>
+                    <Button
+                      color="red"
+                      size="xs"
+                      onClick={() =>
+                        handleAction(row.original.id, "rejected", row.original.student)
+                      }
+                    >
+                      Reject
+                    </Button>
+                  </>
+              )}
+            </div>
+          ),
       },
     ],
     [],
@@ -214,24 +232,12 @@ function MCMApplications() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.tabs}>
-        <div
-          role="button"
-          tabIndex={0}
-          className={activeTab === "MCM" ? styles.activeTab : styles.tab}
-          onClick={() => setActiveTab("MCM")}
-        >
-          Merit-cum-Means Scholarship
-        </div>
-        <div
-          role="button"
-          tabIndex={0}
-          className={activeTab === "Medals" ? styles.activeTab : styles.tab}
-          onClick={() => setActiveTab("Medals")}
-        >
-          Convocation Medals
-        </div>
-      </div>
+      <Tabs value={activeTab} onChange={setActiveTab} mb="lg">
+        <Tabs.List>
+          <Tabs.Tab value="MCM">Merit-cum-Means Scholarship</Tabs.Tab>
+          <Tabs.Tab value="Medals">Convocation Medals</Tabs.Tab>
+        </Tabs.List>
+      </Tabs>
 
       {activeTab === "MCM" && (
         <>
@@ -275,15 +281,22 @@ function MCMApplications() {
           >
             {selectedFiles ? (
               <div className={styles.fileModalContainer}>
-                {[
-                  ["Aadhar Card", selectedFiles.Aadhar_card],
-                  ["Affidavit", selectedFiles.Affidavit],
-                  ["Bank Details", selectedFiles.Bank_details],
-                  ["Fee Receipt", selectedFiles.Fee_Receipt],
-                  ["Marksheet", selectedFiles.Marksheet],
-                  ["Income Certificate", selectedFiles.income_certificate],
-                ].map(([label, path]) =>
-                  path ? (
+                                  {[
+                    ["Generated PDF (System)", selectedFiles.generated_pdf],
+                    ["Income Certificate", selectedFiles.income_certificate],
+                    ["Mother Income Certificate", selectedFiles.mother_income_certificate],
+                    ["Caste Certificate", selectedFiles.caste_certificate],
+                    ["Score Card", selectedFiles.score_card],
+                    ["Undertaking Form", selectedFiles.undertaking_form],
+                    ["Application Form", selectedFiles.application_form],
+                    ["Death Certificate", selectedFiles.death_certificate],
+                    ["Marksheet", selectedFiles.Marksheet],
+                    ["Last Sem Result", selectedFiles.last_sem_result],
+                    ["Bank Details", selectedFiles.Bank_details],
+                    ["Fee Receipt", selectedFiles.Fee_Receipt],
+                    ["Affidavit", selectedFiles.Affidavit],
+                  ].map(([label, path]) =>
+                    path && path !== "" && path !== null ? (
                     <a
                       className={styles.fileLink}
                       key={label}

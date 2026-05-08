@@ -43,7 +43,7 @@ function MedalApplications() {
       if (selectedAward === "D&M Proficiency Gold Medal")
         apiUrl = getProficiencyDMApplicationsRoute;
 
-      const { data } = await axios.get(apiUrl, {
+      const { data } = await axios.get(`${apiUrl}?_t=${new Date().getTime()}`, {
         headers: { Authorization: `Token ${token}` },
       });
       const incomplete = data.filter((m) => m.status === "INCOMPLETE");

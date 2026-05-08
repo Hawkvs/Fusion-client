@@ -26,11 +26,24 @@ function ScholarshipForm() {
   const [uploadStatus, setUploadStatus] = useState({});
   const [documents, setDocuments] = useState({});
   const [showForm, setShowForm] = useState({});
+  const [parentStatus, setParentStatus] = useState("Both Parents Alive");
+  const [category, setCategory] = useState("GEN");
 
   const form = useForm({
     mode: "uncontrolled",
     validateInputOnBlur: true,
     initialValues: {
+      student_name: "",
+      roll_no: "",
+      batch: "",
+      programme: "",
+      cpi: "",
+        last_sem_result: "",
+      category: "GEN",
+      mobile_number: "",
+      address: "",
+      father_name: "",
+      mother_name: "",
       brother_name: "",
       brother_occupation: "",
       sister_name: "",
@@ -65,12 +78,22 @@ function ScholarshipForm() {
       plot_area: (value) => (value < 0 ? "Area must be positive" : null),
       constructed_area: (value) => (value < 0 ? "Area must be positive" : null),
       loan_amount: (value) => (value < 0 ? "Amount must be positive" : null),
-      annual_income: (value) => (value < 0 ? "Income must be positive" : null),
+      annual_income: (value) => (value < 0 ? "Income must be positive" : parseInt(value) > 500000 ? "Eligibility restricted to family income <= 5L" : null),
       college_fee: (value) => (value < 0 ? "Fee must be positive" : null),
       two_wheeler: (value) =>
         value < 0 || value > 100 ? "Must be between 0 and 100" : null,
       four_wheeler: (value) =>
         value < 0 || value > 100 ? "Must be between 0 and 100" : null,
+      student_name: (value) => (!value ? "Student Name is required" : null),
+      roll_no: (value) => (!value ? "Roll No is required" : null),
+      batch: (value) => (!value ? "Batch is required" : null),
+      programme: (value) => (!value ? "Programme is required" : null),
+      cpi: (value) => (!value ? "CPI is required" : parseFloat(value) < 8.0 ? "CPI must be >= 8.0" : parseFloat(value) > 10.0 ? "CPI must be <= 10.0" : null),
+        last_sem_result: (value) => (!value ? "Last Sem Result is required" : null),
+      mobile_number: (value) => (!value ? "Mobile Number is required" : null),
+      address: (value) => (!value ? "Address is required" : null),
+      father_name: (value) => (!value ? "Father Name is required" : null),
+      mother_name: (value) => (!value ? "Mother Name is required" : null),
     },
   });
 
@@ -91,15 +114,51 @@ function ScholarshipForm() {
   const documentFields = [
     {
       id: "income_certificate",
-      name: "income_certificate",
+      name: "Income Certificate (Father/Guardian)",
       type: ".pdf,.doc,.docx",
     },
     { id: "Marksheet", name: "Marksheet", type: ".pdf,.doc,.docx" },
     { id: "Fee_Receipt", name: "Fee_Receipt", type: ".pdf,.jpg,.jpeg,.png" },
     { id: "Bank_details", name: "Bank_details", type: ".pdf,.doc,.docx" },
     { id: "Affidavit", name: "Affidavit", type: ".pdf,.doc,.docx" },
-    { id: "Aadhar_card", name: "Aadhar_card", type: ".pdf,.jpg,.jpeg,.png" },
+    
+    {
+      id: "mother_income_certificate",
+      name: "Mother Income Certificate (or declaration if NIL)",
+      type: ".pdf,.doc,.docx",
+    },
+    {
+      id: "score_card",
+      name: "Score Card (JEE / UCEED for relevant batch)",
+      type: ".pdf,.doc,.docx",
+    },
+    {
+      id: "undertaking_form",
+      name: "Undertaking Form",
+      type: ".pdf,.doc,.docx",
+    },
+    {
+      id: "application_form",
+      name: "Application Form (Form A/B/D)",
+      type: ".pdf,.doc,.docx",
+    },
   ];
+
+  if (parentStatus === "Single Parent") {
+    documentFields.push({
+      id: "death_certificate",
+      name: "Death Certificate",
+      type: ".pdf,.doc,.docx",
+    });
+  }
+
+  if (category !== "GEN") {
+    documentFields.push({
+      id: "caste_certificate",
+      name: "Caste Certificate",
+      type: ".pdf,.doc,.docx",
+    });
+  }
 
   const handleFileChange = (docId, file) => {
     if (file) {
@@ -112,12 +171,21 @@ function ScholarshipForm() {
   };
 
   const handleSubmit = async () => {
+    if (parseFloat(form.values.cpi) < 8.0 || parseInt(form.values.annual_income) > 500000) {
+      alert("Eligibility Criteria not fulfilled: CPI must be >= 8.0 and Annual Income must be <= 500,000. Application cannot be submitted.");
+      return;
+    }
+
     // Check if all required documents are uploaded
     const allDocumentsUploaded = documentFields.every(
       (doc) => documents[doc.id] !== undefined,
     );
     if (!allDocumentsUploaded) {
-      alert("Please upload all required documents.");
+      if (parentStatus === "Single Parent" && !documents.death_certificate) {
+        alert("Death Certificate is required for single parent case");
+      } else {
+        alert("Please upload all required documents.");
+      }
       return;
     }
     const confirmed = window.confirm(
@@ -130,6 +198,9 @@ function ScholarshipForm() {
     Object.keys(form.values).forEach((key) => {
       submissionData.append(key, form.values[key]);
     });
+    submissionData.append("single_parent", parentStatus === "Single Parent");
+    submissionData.append("category", category);
+    submissionData.append("parent_status", parentStatus);
     Object.keys(documents).forEach((key) => {
       if (!documents[key]) {
         alert(`${key} is required`);
@@ -173,7 +244,7 @@ function ScholarshipForm() {
             "Content-Type": "application/json",
             Authorization: `Token ${token}`,
           },
-          body: JSON.stringify({ award: "MCM Scholarship" }),
+          body: JSON.stringify({ award: "Merit-cum-Means Scholarship" }),
         });
 
         const data = await response.json();
@@ -204,7 +275,56 @@ function ScholarshipForm() {
           </Title>
           {step === 1 && (
             <form onSubmit={handleNext}>
+              <Title order={4} mb="sm">
+                Student Details
+              </Title>
               <Grid>
+                <Grid.Col span={{ base: 12, sm: 12 }}>
+                  <Select
+                    label="Parent Status"
+                    placeholder="Select Parent Status"
+                    data={[
+                      { value: "Both Parents Alive", label: "Both Parents Alive" },
+                      { value: "Single Parent", label: "Single Parent" },
+                    ]}
+                    value={parentStatus}
+                    onChange={setParentStatus}
+                    required
+                  />
+                </Grid.Col>
+                {parentStatus === "Both Parents Alive" && (
+                  <>
+                    <Grid.Col span={{ base: 12, sm: 6 }}>
+                      <TextInput
+                        label="Father's Name"
+                        placeholder="Enter father's name"
+                        {...form.getInputProps("father_name")}
+                        required
+                        mt="md"
+                      />
+                    </Grid.Col>
+                    <Grid.Col span={{ base: 12, sm: 6 }}>
+                      <TextInput
+                        label="Mother's Name"
+                        placeholder="Enter mother's name"
+                        {...form.getInputProps("mother_name")}
+                        required
+                        mt="md"
+                      />
+                    </Grid.Col>
+                  </>
+                )}
+                {parentStatus === "Single Parent" && (
+                  <Grid.Col span={{ base: 12, sm: 6 }}>
+                    <TextInput
+                      label="Parent Name"
+                      placeholder="Enter parent's name"
+                      {...form.getInputProps("father_name")}
+                      required
+                      mt="md"
+                    />
+                  </Grid.Col>
+                )}
                 <Grid.Col span={{ base: 12, sm: 6 }}>
                   <Select
                     label="Father's Occupation"
@@ -312,14 +432,19 @@ function ScholarshipForm() {
                     required
                   />
                   <NumberInput
-                    label="Annual Income"
-                    placeholder="Enter annual income"
-                    mt="md"
-                    min={0}
-                    error={form.errors.annual_income}
-                    {...form.getInputProps("annual_income")}
-                    required
-                  />
+                      label="Annual Income"
+                      placeholder="Enter annual income"
+                      mt="md"
+                      min={0}
+                      max={500000}
+                      error={form.errors.annual_income}
+                      {...form.getInputProps("annual_income")}
+                      onChange={(val) => {
+                        if (val > 500000) return;
+                        form.setFieldValue("annual_income", val);
+                      }}
+                      required
+                    />
                   <TextInput
                     label="College Name"
                     placeholder="Enter College Name"
@@ -502,3 +627,4 @@ function ScholarshipForm() {
 }
 
 export default ScholarshipForm;
+
